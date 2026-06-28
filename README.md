@@ -1,5 +1,11 @@
 # word-solution-doc
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![python-docx](https://img.shields.io/badge/python--docx-1.0+-green.svg)](https://python-docx.readthedocs.io/)
+[![GitHub stars](https://img.shields.io/github/stars/yushengxin/word-solution-doc.svg)](https://github.com/yushengxin/word-solution-doc/stargazers)
+[![GitHub release](https://img.shields.io/github/v/release/yushengxin/word-solution-doc.svg)](https://github.com/yushengxin/word-solution-doc/releases)
+
 > 生成符合中文解决方案排版规范的 Word 文档（仿宋小四正文、黑体多级标题、首页+目录+正文结构、自动页码）。
 
 📄 配套的 OpenClaw / Claude Code Skill，使用 `python-docx` 把 Markdown 一键转成符合国内"方案/可研/投标"文档排版规范的 `.docx`。
