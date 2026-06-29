@@ -263,6 +263,24 @@ def add_heading_paragraph(document, text, level, num_id):
     return p
 
 
+def set_table_borders(table):
+    """给表格所有单元格添加 0.5pt 黑色实线框线。"""
+    tbl = table._element
+    tblPr = tbl.find(qn("w:tblPr"))
+    if tblPr is None:
+        tblPr = OxmlElement("w:tblPr")
+        tbl.insert(0, tblPr)
+    tblBorders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        border = OxmlElement(f"w:{edge}")
+        border.set(qn("w:val"), "single")
+        border.set(qn("w:sz"), "4")       # 0.5pt = 4 eighths of a point
+        border.set(qn("w:space"), "0")
+        border.set(qn("w:color"), "000000")
+        tblBorders.append(border)
+    tblPr.append(tblBorders)
+
+
 def add_table(document, headers, rows, col_widths_cm=None):
     """
     表格：
@@ -274,6 +292,9 @@ def add_table(document, headers, rows, col_widths_cm=None):
     table = document.add_table(rows=1 + len(rows), cols=len(headers))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = True
+
+    # 表格框线
+    set_table_borders(table)
 
     # 自动调整 = WINDOW
     tbl_pr = table._element.tblPr
@@ -464,6 +485,30 @@ def setup_default_style(document):
 
 
 # ============================================================
+# 文本清理
+# ============================================================
+import re
+
+# 中文序号模式：一、二、三、…；阿拉伯数字+顿号/点号
+_HEADING_NUMBER_RE = re.compile(
+    r'^[一-鿿]+、'            # 一、二、三、…
+    r'|^\d+(?:\.\d+)*(?:\.|\s+|、|．)'  # 1. / 1.1 / 1、/ 2．
+    r'|^[IVXLCDM]+\.\s*'              # I. II. III.
+)
+_BOLD_MARKER_RE = re.compile(r'\*\*(.+?)\*\*')
+
+
+def strip_heading_number(text):
+    """去掉标题中已有的序号文字，避免与多级列表重复。"""
+    return _HEADING_NUMBER_RE.sub('', text).strip()
+
+
+def replace_bold(text):
+    """将 **内容** 替换为 -内容-。"""
+    return _BOLD_MARKER_RE.sub(r'-\1-', text)
+
+
+# ============================================================
 # Markdown 解析（轻量）
 # ============================================================
 def parse_markdown(md_text):
@@ -494,6 +539,8 @@ def parse_markdown(md_text):
                 level += 1
             if level <= 5:
                 text = stripped[level:].strip()
+                text = replace_bold(text)       # ** → -
+                text = strip_heading_number(text)           # 去掉原有序号
                 blocks.append({"type": f"h{level}", "text": text})
                 i += 1
                 continue
@@ -501,11 +548,11 @@ def parse_markdown(md_text):
         if line.lstrip().startswith("|") and i + 1 < len(lines) \
                 and lines[i + 1].lstrip().startswith("|") \
                 and "---" in lines[i + 1]:
-            header = [c.strip() for c in line.strip().strip("|").split("|")]
+            header = [replace_bold(c.strip()) for c in line.strip().strip("|").split("|")]
             i += 2  # 跳过分隔行
             rows = []
             while i < len(lines) and lines[i].lstrip().startswith("|"):
-                row = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+                row = [replace_bold(c.strip()) for c in lines[i].strip().strip("|").split("|")]
                 rows.append(row)
                 i += 1
             blocks.append({"type": "table", "headers": header, "rows": rows})
@@ -518,7 +565,7 @@ def parse_markdown(md_text):
                 and not lines[i].lstrip().startswith("|"):
             para_lines.append(lines[i].strip())
             i += 1
-        blocks.append({"type": "body", "text": " ".join(para_lines).strip()})
+        blocks.append({"type": "body", "text": replace_bold(" ".join(para_lines).strip())})
     return blocks
 
 
